@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:id="@+id/default_group">
+        <item
+            android:id="@+id/upload"
+            android:icon="@drawable/upload"
+            android:title="Upload" />
+        <item
+            android:id="@+id/touch"
+            android:icon="@drawable/add"
+            android:title="New file" />
+        <item
+            android:id="@+id/refresh"
+            android:icon="@drawable/refresh"
+            android:title="Refresh" />
+        <item
+            android:id="@+id/disconnect"
+            android:icon="@drawable/disconnect"
+            android:title="Disconnect" />
+    </group>
+    <group android:id="@+id/share_group">
+        <item
+            android:id="@+id/share"
+            android:icon="@drawable/upload"
+            android:title="Upload here" />
+    </group>
+</menu>
