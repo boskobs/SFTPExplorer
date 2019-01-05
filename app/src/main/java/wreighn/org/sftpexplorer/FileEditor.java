@@ -24,7 +24,7 @@ public class FileEditor extends AppCompatActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.file_editor, menu);
+        getMenuInflater().inflate(R.menu.file_editor_activity, menu);
         return true;
     }
 

@@ -209,4 +209,10 @@ public class Statics {
             Log.d("mojtagerr", e.toString());
         }
     }
+
+    public static String removeTrailing(String txt, String trail) {
+        while (txt.endsWith(trail) && txt.length() > 0)
+            txt = txt.substring(0, txt.length() - 1);
+        return txt;
+    }
 }

@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <group android:id="@+id/default_group">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <group android:id="@+id/defaultGroup">
         <item
             android:id="@+id/upload"
             android:icon="@drawable/upload"
-            android:title="Upload" />
+            android:title="Upload"
+            app:showAsAction="ifRoom" />
         <item
             android:id="@+id/touch"
             android:icon="@drawable/add"
@@ -18,10 +20,11 @@
             android:icon="@drawable/disconnect"
             android:title="Disconnect" />
     </group>
-    <group android:id="@+id/share_group">
+    <group android:id="@+id/shareGroup">
         <item
             android:id="@+id/share"
             android:icon="@drawable/upload"
-            android:title="Upload here" />
+            android:title="Upload here"
+            app:showAsAction="ifRoom" />
     </group>
 </menu>

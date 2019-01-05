@@ -72,9 +72,9 @@ public class SFTPSession extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         this.menu = menu;
-        getMenuInflater().inflate(R.menu.sftp_session, menu);
-        if (MainActivity.share != null) menu.removeGroup(R.id.default_group);
-        else menu.removeGroup(R.id.share_group);
+        getMenuInflater().inflate(R.menu.sftp_session_activity, menu);
+        if (MainActivity.share != null) menu.removeGroup(R.id.defaultGroup);
+        else menu.removeGroup(R.id.shareGroup);
         return true;
     }
 
@@ -180,7 +180,7 @@ public class SFTPSession extends AppCompatActivity {
             Channel channel = session.openChannel("sftp");
             channel.connect();
             sftp = (ChannelSftp) channel;
-            String home = host.get("defaultpath").getAsString().equals("") ? sftp.getHome() : host.get("defaultpath").getAsString();
+            String home = host.get("defaultpath").getAsString().equals("") ? sftp.getHome() : runCmd("cd \"" + host.get("defaultpath").getAsString() + "\";pwd;");
             //
             List<String> l = new LinkedList<>(Arrays.asList(home.split("/")));
             while (l.size() > 1) {
@@ -259,7 +259,7 @@ public class SFTPSession extends AppCompatActivity {
                 if (x.getAttrs().isDir())
                     fileImg.setImageDrawable(getResources().getDrawable(R.drawable.directory));
                 else if (x.getAttrs().isLink()) {
-                    ChannelSftp.LsEntry tracked = traceLink(x, currentDir.getText().toString());
+                    ChannelSftp.LsEntry tracked = traceLink(x, currentDir.getText().toString(), null);
                     if (tracked == null) {
                         linkType = 'n';
                         fileImg.setImageDrawable(getResources().getDrawable(R.drawable.link));
@@ -459,7 +459,7 @@ public class SFTPSession extends AppCompatActivity {
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    menu.removeGroup(R.id.share_group);
+                                    menu.removeGroup(R.id.shareGroup);
                                 }
                             });
                             noti.update(0, (int) max);
@@ -497,8 +497,12 @@ public class SFTPSession extends AppCompatActivity {
         }).start();
     }
 
-    private ChannelSftp.LsEntry traceLink(ChannelSftp.LsEntry x, String oldPath) throws SftpException {
-        String line = sftp.readlink(oldPath + "/" + x.getFilename());
+    private ChannelSftp.LsEntry traceLink(ChannelSftp.LsEntry x, String oldPath, ArrayList<String> history) throws SftpException {
+        if (history == null) history = new ArrayList<>();
+        String line = Statics.removeTrailing(sftp.readlink(oldPath + "/" + x.getFilename()), "/");
+        if (history.contains(line))
+            return null;
+        history.add(line);
         String name = line.substring(line.lastIndexOf("/") + 1);
         String path = line.substring(0, line.lastIndexOf("/"));
         ChannelSftp.LsEntry entry = null;
@@ -511,7 +515,7 @@ public class SFTPSession extends AppCompatActivity {
         }
         if (entry == null) return null;
         if (entry.getAttrs().isLink())
-            entry = traceLink(entry, path);
+            entry = traceLink(entry, path, history);
         return entry;
     }
 
@@ -619,7 +623,7 @@ public class SFTPSession extends AppCompatActivity {
                         if (input.getText().toString().equals(""))
                             dialog.dismiss();
                         else {
-                            runCmd("cd \"" + currentDir.getText().toString() + "\";touch \"" + input.getText().toString().replace("\"", "").replace("/", "") + "\"");
+                            runCmd("cd \"" + currentDir.getText().toString() + "\";touch \"" + input.getText().toString() + "\""); // Add type safety
                             populate(currentDir.getText().toString());
                         }
                     }

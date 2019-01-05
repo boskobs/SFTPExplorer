@@ -124,7 +124,7 @@
             <View
                 android:layout_width="0dp"
                 android:layout_height="0dp"
-                android:layout_weight="1"/>
+                android:layout_weight="1" />
 
             <CheckBox
                 android:id="@+id/passphraseAsk"
@@ -144,11 +144,5 @@
             android:layout_height="wrap_content"
             android:hint="Home dir if left empty"
             android:inputType="textNoSuggestions" />
-
-        <Button
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:onClick="save"
-            android:text="Save" />
     </LinearLayout>
 </ScrollView>

@@ -3,6 +3,9 @@ package wreighn.org.sftpexplorer;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -14,11 +17,30 @@ import java.io.File;
 import java.util.ArrayList;
 
 public class Host extends AppCompatActivity {
+    private Menu menu;
     private Host that;
     private JsonObject oldHost = null;
     private boolean edit = false;
     private EditText name, host, user, password, port, key, passphrase, defaultPath;
     private CheckBox passphraseAsk;
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        this.menu = menu;
+        getMenuInflater().inflate(R.menu.host_activity, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.save:
+                save();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,7 +86,7 @@ public class Host extends AppCompatActivity {
                 }).build().show();
     }
 
-    public void save(View v) {
+    private void save() {
         if (name.getText().toString().equals("")) {
             name.setError("The \"Name\" field mustn't be empty.");
             return;
@@ -77,24 +99,26 @@ public class Host extends AppCompatActivity {
         }
         JsonObject host = new JsonObject();
         host.addProperty("id", edit ? oldHost.get("id").getAsLong() : System.nanoTime());
-        host.addProperty("name", name.getText().toString());
-        host.addProperty("host", that.host.getText().toString());
-        host.addProperty("user", user.getText().toString());
+        host.addProperty("name", name.getText().toString().trim());
+        host.addProperty("host", that.host.getText().toString().trim());
+        host.addProperty("user", user.getText().toString().trim());
         host.addProperty("port", port.getText().toString().equals("") ? 22 : Integer.parseInt(port.getText().toString()));
-        host.addProperty("password", password.getText().toString());
-        host.addProperty("passphrase", passphrase.getText().toString());
+        host.addProperty("password", password.getText().toString().trim());
+        host.addProperty("passphrase", passphrase.getText().toString().trim());
         host.addProperty("passphraseask", passphraseAsk.isChecked());
-        host.addProperty("defaultpath", defaultPath.getText().toString());
-        host.addProperty("key", key.getText().toString());
+        host.addProperty("defaultpath", defaultPath.getText().toString().trim());
+        host.addProperty("key", key.getText().toString().trim());
         ArrayList<JsonObject> tmpHosts = Statics.getHosts();
-        if (!edit) {
-            for (JsonObject x : tmpHosts) {
-                if (x.get("name").getAsString().equals(name.getText().toString())) {
-                    name.setError("This host entry already exists");
-                    return;
-                }
+        for (JsonObject x : tmpHosts) {
+            boolean sameName = x.get("name").getAsString().equals(name.getText().toString().trim());
+            boolean sameId = edit && x.get("id").getAsLong() == oldHost.get("id").getAsLong();
+            if ((!edit && sameName) || (edit && !sameId && sameName)) {
+                Log.d("mojtag", sameName + " " + sameId);
+                name.setError("This host entry already exists");
+                return;
             }
-        } else {
+        }
+        if (edit) {
             for (JsonObject x : tmpHosts) {
                 if (x.get("id").getAsLong() == oldHost.get("id").getAsLong()) {
                     tmpHosts.remove(x);
