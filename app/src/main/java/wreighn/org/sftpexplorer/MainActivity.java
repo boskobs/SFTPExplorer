@@ -82,6 +82,7 @@ public class MainActivity extends AppCompatActivity {
         that = this;
         makeChannel();
         defineReciever();
+        share = null;
         onSharedIntent();
         Statics.getWritePermission(that);
         Statics.db = new DB(that.getApplicationContext());

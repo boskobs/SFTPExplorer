@@ -27,4 +27,9 @@
             android:title="Upload here"
             app:showAsAction="ifRoom" />
     </group>
+    <item
+        android:id="@+id/showHidden"
+        android:icon="@drawable/disconnect"
+        android:title="Show hidden"
+        android:checkable="true" />
 </menu>

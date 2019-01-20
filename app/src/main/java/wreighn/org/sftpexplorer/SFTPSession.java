@@ -36,6 +36,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -57,10 +58,19 @@ public class SFTPSession extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        if ((MainActivity.share != null && menu.size() > 0) || transfers == 0)
-            super.onBackPressed();
-        else
-            Statics.alert(that, "Ongoing transfers", "Wait for the file transfer/s to finish", false);
+        if (dirHistory.size() > 1) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    populate("..");
+                }
+            }).start();
+        } else {
+            if (transfers == 0)
+                super.onBackPressed();
+            else
+                Statics.alert(that, "Ongoing transfers", "Wait for the file transfer/s to finish", false);
+        }
     }
 
     @Override
@@ -75,6 +85,7 @@ public class SFTPSession extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.sftp_session_activity, menu);
         if (MainActivity.share != null) menu.removeGroup(R.id.defaultGroup);
         else menu.removeGroup(R.id.shareGroup);
+        menu.findItem(R.id.showHidden).setChecked(Statics.db.settings.get("showhidden").getAsBoolean());
         return true;
     }
 
@@ -88,7 +99,7 @@ public class SFTPSession extends AppCompatActivity {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        populate(currentDir.getText().toString());
+                        populate(null);
                     }
                 }).start();
                 return true;
@@ -103,6 +114,12 @@ public class SFTPSession extends AppCompatActivity {
                 return true;
             case R.id.share:
                 shareTransfer();
+                return true;
+            case R.id.showHidden:
+                Statics.db.settings.addProperty("showhidden", !Statics.db.settings.get("showhidden").getAsBoolean());
+                Statics.db.saveSettings();
+                menu.findItem(R.id.showHidden).setChecked(!menu.findItem(R.id.showHidden).isChecked());
+                toggleHidden();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -203,40 +220,59 @@ public class SFTPSession extends AppCompatActivity {
     }
 
     private void populate(String dir) {
-        if (dir.endsWith("/") && dir.length() > 1)
+        if (dir != null && dir.endsWith("/") && dir.length() > 1)
             dir = dir.substring(0, dir.length() - 1);
         try {
-            if (dir.equals("..")) {
-                if (dirHistory.size() > 1) {
-                    sftp.cd(dirHistory.get(dirHistory.size() - 2));
-                    dirHistory.remove(dirHistory.size() - 1);
-                }
-            } else {
-                sftp.cd(dir);
-                dirHistory.add(sftp.pwd());
-            }
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        currentDir.setText(sftp.pwd());
-                    } catch (SftpException e) {
-                        Log.d("mojtagerr", e.toString());
+            if (dir != null) {
+                if (dir.equals("..")) {
+                    if (dirHistory.size() > 1) {
+                        sftp.cd(dirHistory.get(dirHistory.size() - 2));
+                        dirHistory.remove(dirHistory.size() - 1);
                     }
+                } else {
+                    sftp.cd(dir);
+                    if (!dirHistory.get(dirHistory.size() - 1).equals(dir))
+                        dirHistory.add(sftp.pwd());
                 }
-            });
-            Vector<ChannelSftp.LsEntry> filesRaw = sftp.ls(sftp.pwd());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            currentDir.setText(sftp.pwd());
+                        } catch (SftpException e) {
+                            Log.d("mojtagerr", e.toString());
+                        }
+                    }
+                });
+            }
+            Vector<ChannelSftp.LsEntry> filesRaw = null;
+            try {
+                filesRaw = sftp.ls(sftp.pwd());
+            } catch (Exception e) {
+                if (e.toString().contains("Permission denied")) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Statics.alert(that, "Directory change failed", "You may not have sufficient permissions to access this directory", false);
+                        }
+                    });
+                    populate("..");
+                    return;
+                }
+            }
             ArrayList<ChannelSftp.LsEntry> files = new ArrayList<>();
             ChannelSftp.LsEntry back = null;
             for (ChannelSftp.LsEntry x : filesRaw) {
+                if (x.getFilename().equals("..")) {
+                    back = x;
+                    continue;
+                }
                 if (x.getAttrs().isDir() && !x.getFilename().equals(".") && !x.getFilename().equals(".."))
                     files.add(x);
-                if (x.getFilename().equals("..")) back = x;
+                else if (MainActivity.share == null && !x.getAttrs().isDir())
+                    files.add(x);
             }
-            if (MainActivity.share == null)
-                for (ChannelSftp.LsEntry x : filesRaw)
-                    if (!x.getAttrs().isDir())
-                        files.add(x);
+            Collections.sort(files);
             files.add(0, back);
             // Populate
             runOnUiThread(new Runnable() {
@@ -247,6 +283,11 @@ public class SFTPSession extends AppCompatActivity {
             });
             for (final ChannelSftp.LsEntry x : files) {
                 final View fileContainer = LayoutInflater.from(this).inflate(R.layout.file_entry, null);
+                if (x.getFilename().equals(".."))
+                    fileContainer.findViewById(R.id.menu).setVisibility(View.GONE);
+                if (!Statics.db.settings.get("showhidden").getAsBoolean() &&
+                        x.getFilename().charAt(0) == '.' && x.getFilename().charAt(1) != '.')
+                    fileContainer.setVisibility(View.GONE);
                 TextView fileName = fileContainer.findViewById(R.id.name);
                 TextView ownerGroupPermissions = fileContainer.findViewById(R.id.ownerGroupPermissions);
                 ImageView fileImg = fileContainer.findViewById(R.id.fileImg);
@@ -447,6 +488,16 @@ public class SFTPSession extends AppCompatActivity {
         }
     }
 
+    private void toggleHidden() {
+        boolean hidden = !Statics.db.settings.get("showhidden").getAsBoolean();
+        for (int index = 0; index < (all).getChildCount(); index++) {
+            View child = all.getChildAt(index);
+            if (((TextView) child.findViewById(R.id.name)).getText().toString().charAt(0) == '.' &&
+                    ((TextView) child.findViewById(R.id.name)).getText().toString().charAt(1) != '.')
+                child.setVisibility(hidden ? View.GONE : View.VISIBLE);
+        }
+    }
+
     private void shareTransfer() {
         final Notification noti = new Notification(that, MainActivity.shareName, false, false);
         new Thread(new Runnable() {
@@ -456,6 +507,7 @@ public class SFTPSession extends AppCompatActivity {
                     sftp.put(MainActivity.share, currentDir.getText().toString() + "/" + MainActivity.shareName, new SftpProgressMonitor() {
                         @Override
                         public void init(int op, String src, String dest, long max) {
+                            transfers++;
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -474,6 +526,7 @@ public class SFTPSession extends AppCompatActivity {
 
                         @Override
                         public void end() {
+                            transfers--;
                             noti.done();
                             try {
                                 runOnUiThread(new Runnable() {

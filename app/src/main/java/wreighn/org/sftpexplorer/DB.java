@@ -16,6 +16,15 @@ public class DB {
 
     public DB(Context cont) {
         preferences = PreferenceManager.getDefaultSharedPreferences(cont);
+        settings = getJsonObject("settings");
+        if (!settings.has("showhidden")) settings.addProperty("showhidden", true);
+        saveSettings();
+    }
+
+    public JsonObject settings;
+
+    public void saveSettings() {
+        putJsonObject("settings", settings);
     }
 
     public void putJsonObject(String key, JsonObject value) {
@@ -24,7 +33,7 @@ public class DB {
 
     public void putJsonObjectList(String key, ArrayList<JsonObject> value) {
         JsonArray tmp = new JsonArray();
-        for(JsonObject x : value)
+        for (JsonObject x : value)
             tmp.add(x);
         preferences.edit().putString(key, tmp.toString()).apply();
     }
